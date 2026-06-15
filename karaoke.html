@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Когда весёлый ветер — Караоке</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Inter:wght@300;400&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --sky: #0b1a3b;
+    --deep: #060e22;
+    --gold: #f5c842;
+    --amber: #e8893a;
+    --sung: #f5c842;
+    --dim: #4a6080;
+    --glow: rgba(245,200,66,0.18);
+  }
+
+  body {
+    background: var(--deep);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-x: hidden;
+    color: #fff;
+  }
+
+  /* Stars */
+  #stars-canvas {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 820px;
+    padding: 2rem 1.5rem 4rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+  }
+
+  .eyebrow {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.7rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 0.6rem;
+  }
+
+  h1 {
+    font-family: 'Unbounded', sans-serif;
+    font-size: clamp(1.4rem, 4vw, 2.4rem);
+    font-weight: 900;
+    line-height: 1.15;
+    background: linear-gradient(135deg, #fff 30%, var(--gold));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .subtitle {
+    margin-top: 0.5rem;
+    font-size: 0.78rem;
+    color: var(--dim);
+    letter-spacing: 0.06em;
+  }
+
+  /* Progress bar */
+  .progress-wrap {
+    width: 100%;
+    height: 3px;
+    background: rgba(255,255,255,0.07);
+    border-radius: 3px;
+    margin-bottom: 2.5rem;
+    overflow: hidden;
+  }
+  .progress-bar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--amber), var(--gold));
+    border-radius: 3px;
+    transition: width 0.15s linear;
+    box-shadow: 0 0 8px var(--gold);
+  }
+
+  /* Lyrics */
+  .lyrics-box {
+    width: 100%;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 20px;
+    padding: 2.5rem 2rem;
+    backdrop-filter: blur(10px);
+  }
+
+  .verse {
+    margin-bottom: 2rem;
+  }
+  .verse:last-child { margin-bottom: 0; }
+
+  .verse-label {
+    font-size: 0.62rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 0.8rem;
+    opacity: 0.7;
+  }
+
+  .line {
+    display: block;
+    font-family: 'Unbounded', sans-serif;
+    font-size: clamp(0.85rem, 2.2vw, 1.15rem);
+    font-weight: 400;
+    line-height: 1.85;
+    color: var(--dim);
+    transition: color 0.25s;
+    position: relative;
+    padding-left: 0;
+  }
+
+  .line.active {
+    color: #fff;
+  }
+
+  .line.sung {
+    color: var(--sung);
+  }
+
+  /* Word-level highlight */
+  .word {
+    display: inline;
+    transition: color 0.12s, text-shadow 0.12s;
+  }
+  .word.lit {
+    color: var(--gold);
+    text-shadow: 0 0 18px rgba(245,200,66,0.7), 0 0 4px rgba(245,200,66,0.4);
+  }
+
+  /* Chorus styling */
+  .chorus .line {
+    font-weight: 700;
+  }
+
+  /* Controls */
+  .controls {
+    margin-top: 2.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .btn {
+    background: none;
+    border: 1.5px solid rgba(255,255,255,0.15);
+    color: #fff;
+    border-radius: 50px;
+    padding: 0.65rem 1.8rem;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.82rem;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s, transform 0.1s;
+  }
+  .btn:hover {
+    border-color: var(--gold);
+    background: var(--glow);
+  }
+  .btn:active { transform: scale(0.96); }
+
+  .btn-play {
+    background: linear-gradient(135deg, var(--amber), var(--gold));
+    border-color: transparent;
+    color: #1a0e00;
+    font-weight: 700;
+    font-size: 0.9rem;
+    padding: 0.75rem 2.4rem;
+    box-shadow: 0 0 20px rgba(245,200,66,0.25);
+  }
+  .btn-play:hover {
+    background: linear-gradient(135deg, #f0a040, #ffe060);
+    border-color: transparent;
+  }
+
+  .tempo-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.75rem;
+    color: var(--dim);
+  }
+  .tempo-wrap input[type=range] {
+    accent-color: var(--gold);
+    width: 90px;
+  }
+
+  /* Time display */
+  .time-display {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 0.75rem;
+    color: var(--dim);
+    letter-spacing: 0.1em;
+    min-width: 80px;
+    text-align: center;
+  }
+
+  @media (max-width: 500px) {
+    .lyrics-box { padding: 1.5rem 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="stars-canvas"></canvas>
+
+<div class="container">
+  <header>
+    <p class="eyebrow">Советская классика · 1936</p>
+    <h1>Когда весёлый ветер</h1>
+    <p class="subtitle">из кинофильма «Дети капитана Гранта» · муз. И. Дунаевского</p>
+  </header>
+
+  <div class="progress-wrap">
+    <div class="progress-bar" id="progress"></div>
+  </div>
+
+  <div class="lyrics-box" id="lyrics-box">
+    <!-- Verses injected by JS -->
+  </div>
+
+  <div class="controls">
+    <button class="btn" id="btn-restart">↺ Сначала</button>
+    <button class="btn btn-play" id="btn-play">▶ Старт</button>
+    <div class="tempo-wrap">
+      <span>Темп</span>
+      <input type="range" id="tempo" min="0.4" max="1.8" step="0.05" value="1">
+      <span id="tempo-val">×1.0</span>
+    </div>
+    <div class="time-display" id="time-display">0:00 / 0:00</div>
+  </div>
+</div>
+
+<script>
+// ── Stars ──────────────────────────────────────────────────────────────
+const canvas = document.getElementById('stars-canvas');
+const ctx = canvas.getContext('2d');
+let stars = [];
+
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', () => { resize(); initStars(); });
+
+function initStars() {
+  stars = Array.from({length: 180}, () => ({
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    r: Math.random() * 1.4 + 0.2,
+    a: Math.random(),
+    speed: Math.random() * 0.008 + 0.002
+  }));
+}
+initStars();
+
+function drawStars(t) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  stars.forEach(s => {
+    s.a = 0.3 + 0.7 * (0.5 + 0.5 * Math.sin(t * s.speed * 6));
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255,240,180,${s.a})`;
+    ctx.fill();
+  });
+}
+
+// ── Lyrics data ────────────────────────────────────────────────────────
+// Lyrics in the public domain (pre-1946 Soviet work)
+const lyrics = [
+  { type: 'verse', label: 'Куплет 1', lines: [
+    'Я по свету немало хаживал,',
+    'Жил в землянках, в окопах, в тайге,',
+    'Похлебал я солдатской каши,',
+    'Видал виды на всей земле.',
+  ]},
+  { type: 'chorus', label: 'Припев', lines: [
+    'Но, покуда я жить умею,',
+    'Буду петь я друзьям своим:',
+    'Пусть всегда будет солнце,',
+    'Пусть всегда будет небо,',
+    'Пусть всегда будет мама,',
+    'Пусть всегда буду я!',
+  ]},
+  { type: 'verse', label: 'Куплет 2', lines: [
+    'Кто привык за победу бороться,',
+    'С нами вместе пускай запоёт:',
+    'Кто весел — тот смеётся,',
+    'Кто хочет — тот добьётся,',
+    'Кто ищет — тот всегда найдёт!',
+  ]},
+  { type: 'chorus', label: 'Припев', lines: [
+    'Но, покуда я жить умею,',
+    'Буду петь я друзьям своим:',
+    'Пусть всегда будет солнце,',
+    'Пусть всегда будет небо,',
+    'Пусть всегда будет мама,',
+    'Пусть всегда буду я!',
+  ]},
+  { type: 'verse', label: 'Куплет 3', lines: [
+    'Когда весёлый ветер снова',
+    'В путь позовёт через горы и даль,',
+    'Не страшна нам любая невзгода,',
+    'Нам любая дорога не в тяжесть,',
+  ]},
+  { type: 'chorus', label: 'Финальный припев', lines: [
+    'Но, покуда я жить умею,',
+    'Буду петь я друзьям своим:',
+    'Пусть всегда будет солнце,',
+    'Пусть всегда будет небо,',
+    'Пусть всегда будет мама,',
+    'Пусть всегда буду я!',
+  ]},
+];
+
+// Build flat list of lines with timing (seconds per line ~2.8s base)
+const BASE_LINE_DURATION = 2.8; // seconds at ×1 tempo
+
+// Build DOM & timing index
+const box = document.getElementById('lyrics-box');
+const lineEls = [];
+const lineTimings = []; // [{start, end, words:[{el,start,end}]}]
+
+let cursor = 0.5; // start offset
+
+lyrics.forEach(section => {
+  const div = document.createElement('div');
+  div.className = `verse ${section.type === 'chorus' ? 'chorus' : ''}`;
+
+  const label = document.createElement('p');
+  label.className = 'verse-label';
+  label.textContent = section.label;
+  div.appendChild(label);
+
+  section.lines.forEach(text => {
+    const span = document.createElement('span');
+    span.className = 'line';
+
+    const words = text.split(' ');
+    const dur = BASE_LINE_DURATION + words.length * 0.12;
+    const wordDur = dur / words.length;
+
+    const wordEls = [];
+    words.forEach((w, i) => {
+      const wspan = document.createElement('span');
+      wspan.className = 'word';
+      wspan.textContent = w + (i < words.length - 1 ? ' ' : '');
+      span.appendChild(wspan);
+      wordEls.push({
+        el: wspan,
+        start: cursor + i * wordDur,
+        end: cursor + (i + 1) * wordDur
+      });
+    });
+
+    lineTimings.push({ el: span, start: cursor, end: cursor + dur, words: wordEls });
+    lineEls.push(span);
+    div.appendChild(span);
+    cursor += dur + 0.15;
+  });
+
+  cursor += 0.5; // gap between sections
+  box.appendChild(div);
+});
+
+const totalDuration = cursor;
+
+// ── Playback ───────────────────────────────────────────────────────────
+let playing = false;
+let elapsed = 0; // seconds
+let lastTs = null;
+let tempo = 1;
+let rafId = null;
+
+const btnPlay = document.getElementById('btn-play');
+const btnRestart = document.getElementById('btn-restart');
+const progressEl = document.getElementById('progress');
+const timeEl = document.getElementById('time-display');
+const tempoInput = document.getElementById('tempo');
+const tempoVal = document.getElementById('tempo-val');
+
+function fmt(s) {
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60).toString().padStart(2,'0');
+  return `${m}:${sec}`;
+}
+
+function update(ts) {
+  if (!lastTs) lastTs = ts;
+  const dt = (ts - lastTs) / 1000 * tempo;
+  lastTs = ts;
+  elapsed += dt;
+
+  if (elapsed >= totalDuration) {
+    elapsed = totalDuration;
+    playing = false;
+    btnPlay.textContent = '▶ Сначала';
+  }
+
+  const pct = (elapsed / totalDuration) * 100;
+  progressEl.style.width = pct + '%';
+  timeEl.textContent = fmt(elapsed) + ' / ' + fmt(totalDuration);
+
+  // Update lines
+  lineTimings.forEach(lt => {
+    if (elapsed >= lt.end) {
+      lt.el.className = 'line sung';
+      lt.words.forEach(w => { w.el.className = 'word'; });
+    } else if (elapsed >= lt.start) {
+      lt.el.className = 'line active';
+      // word highlight
+      lt.words.forEach(w => {
+        if (elapsed >= w.start && elapsed < w.end) {
+          w.el.className = 'word lit';
+        } else if (elapsed >= w.end) {
+          w.el.className = 'word';
+        } else {
+          w.el.className = 'word';
+        }
+      });
+      // Auto-scroll
+      lt.el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else {
+      lt.el.className = 'line';
+      lt.words.forEach(w => { w.el.className = 'word'; });
+    }
+  });
+
+  drawStars(ts / 1000);
+
+  if (playing) rafId = requestAnimationFrame(update);
+}
+
+function startAnim(ts) {
+  lastTs = ts;
+  rafId = requestAnimationFrame(update);
+}
+
+btnPlay.addEventListener('click', () => {
+  if (elapsed >= totalDuration) {
+    elapsed = 0;
+    resetLines();
+  }
+  playing = !playing;
+  if (playing) {
+    btnPlay.textContent = '⏸ Пауза';
+    lastTs = null;
+    rafId = requestAnimationFrame(startAnim);
+  } else {
+    btnPlay.textContent = '▶ Продолжить';
+    cancelAnimationFrame(rafId);
+  }
+});
+
+btnRestart.addEventListener('click', () => {
+  playing = false;
+  elapsed = 0;
+  cancelAnimationFrame(rafId);
+  resetLines();
+  progressEl.style.width = '0%';
+  timeEl.textContent = '0:00 / ' + fmt(totalDuration);
+  btnPlay.textContent = '▶ Старт';
+  // still animate stars
+  requestAnimationFrame(ts => { drawStars(ts/1000); });
+});
+
+tempoInput.addEventListener('input', () => {
+  tempo = parseFloat(tempoInput.value);
+  tempoVal.textContent = '×' + tempo.toFixed(1);
+});
+
+function resetLines() {
+  lineTimings.forEach(lt => {
+    lt.el.className = 'line';
+    lt.words.forEach(w => { w.el.className = 'word'; });
+  });
+}
+
+// Idle star animation
+(function idleLoop(ts) {
+  if (!playing) { drawStars(ts/1000); }
+  requestAnimationFrame(idleLoop);
+})();
+
+timeEl.textContent = '0:00 / ' + fmt(totalDuration);
+</script>
+</body>
+</html>
